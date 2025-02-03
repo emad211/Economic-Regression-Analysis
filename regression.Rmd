@@ -1,0 +1,689 @@
+---
+title: "R Notebook"
+output:
+  html_notebook: default
+  pdf_document: default
+---
+
+
+```{r}
+library(readxl)
+
+file_path <- "C:/Users/KHOOBTEK/Desktop/Final_Data_Translated.xlsx"
+
+data <- read_excel(file_path)
+
+head(data)
+
+```  
+
+
+---
+
+---
+```{r}
+
+summary(data)
+
+```
+```{r}
+if (!requireNamespace("nortest", quietly = TRUE)) {
+  install.packages("nortest")
+}
+library(nortest)
+
+for (var in c("Overall Index", "Interest Rate", "Inflation Rate", "Exchange Rate", "Oil Price")) {
+  cat("\n==============================\n")
+  cat("Variable:", var, "\n")
+  cat("==============================\n\n")
+  
+  ad_result <- ad.test(data[[var]])
+  print(ad_result)
+}
+
+```
+
+
+---
+
+--- 
+
+```{r}
+for (var in c("Overall Index", "Interest Rate", "Inflation Rate", "Exchange Rate", "Oil Price")) {
+  cat("\n==============================\n")
+  cat("Variable:", var, "\n")
+  cat("==============================\n\n")
+  
+  ks_result <- ks.test(data[[var]], "pnorm", mean(data[[var]], na.rm = TRUE), sd(data[[var]], na.rm = TRUE))
+  print(ks_result)
+}
+
+```
+
+---
+
+---
+
+
+```{r}
+for (var in c("Overall Index", "Interest Rate", "Inflation Rate", "Exchange Rate", "Oil Price")) {
+  cat("\n==============================\n")
+  cat("Variable:", var, "\n")
+  cat("==============================\n\n")
+  
+  shapiro_result <- shapiro.test(data[[var]])
+  print(shapiro_result)
+}
+
+```
+---
+
+---
+
+
+
+
+
+
+
+```{r}
+data$Year_Group <- cut(
+  data$Year,
+  breaks = c(1379, 1383, 1387, 1391, 1395, 1399, 1403),
+  labels = c("1379-1382", "1383-1386", "1387-1390", "1391-1394", "1395-1398", "1399-1402"),
+  include.lowest = TRUE,
+  right = FALSE
+)
+```
+ 
+---
+
+---
+```{r}
+data$Year_Group <- cut(
+  data$Year,
+  breaks = c(1379, 1385, 1391, 1397, 1403),  # مرزهای بازه‌ها برای 4 گروه 6 تایی
+  labels = c("1379-1384", "1385-1390", "1391-1396", "1397-1402"),  # برچسب‌ها
+  include.lowest = TRUE,  # شامل اولین مقدار
+  right = FALSE           # کران راست باز نیست (چپ بسته است)
+)
+
+```
+
+```{r}
+data$Year_Group <- cut(
+  data$Year,
+  breaks = seq(1379, 1403, by = 3),  # مرزهای بازه‌ها برای 8 گروه 3 تایی
+  labels = c("1379-1381", "1382-1384", "1385-1387", "1388-1390", 
+             "1391-1393", "1394-1396", "1397-1399", "1400-1402"),  # برچسب‌ها
+  include.lowest = TRUE,  # شامل اولین مقدار
+  right = FALSE           # کران راست باز نیست (چپ بسته است)
+)
+
+```
+
+```{r}
+table(data$Year_Group)
+```
+
+---
+
+---
+
+
+```{r}
+numeric_vars <- c("Overall Index", "Interest Rate", "Inflation Rate", "Exchange Rate", "Oil Price")
+
+for (var in numeric_vars) {
+  cat("\n==============================\n")
+  cat("Variable:", var, "\n")
+  cat("==============================\n\n")
+  
+  cat(">>> Bartlett Test <<<\n")
+  print(
+    bartlett.test(
+      as.formula(paste0("`", var, "` ~ Year_Group")),
+      data = data
+    )
+  )
+  cat("\n\n")
+}
+
+```
+
+---
+
+---
+
+```{r}
+# نصب و بارگذاری بسته car (در صورت نیاز)
+if (!requireNamespace("car", quietly = TRUE)) {
+  install.packages("car")
+}
+library(car)
+
+# آزمون Levene برای هر متغیر
+numeric_vars <- c("Overall Index", "Interest Rate", "Inflation Rate", "Exchange Rate", "Oil Price")
+
+for (var in numeric_vars) {
+  cat("\n==============================\n")
+  cat("Variable:", var, "\n")
+  cat("==============================\n\n")
+  
+  cat(">>> Levene Test <<<\n")
+  print(
+    leveneTest(
+      as.formula(paste0("`", var, "` ~ Year_Group")), 
+      data = data
+    )
+  )
+  cat("\n\n")
+}
+
+```
+
+---
+
+---
+
+
+```{r}
+# آزمون Fligner-Killeen برای هر متغیر
+for (var in numeric_vars) {
+  cat("\n==============================\n")
+  cat("Variable:", var, "\n")
+  cat("==============================\n\n")
+  
+  cat(">>> Fligner-Killeen Test <<<\n")
+  print(
+    fligner.test(
+      as.formula(paste0("`", var, "` ~ Year_Group")),
+      data = data
+    )
+  )
+  cat("\n\n")
+}
+
+```
+```{r}
+
+
+numeric_vars <- c("Overall Index", "Interest Rate", 
+                  "Inflation Rate", "Exchange Rate", "Oil Price")
+
+for (var in numeric_vars) {
+
+  
+  # ترسیم هیستوگرام و نمودار QQ برای مشاهده توزیع
+  par(mfrow = c(1, 2))
+  hist(data[[var]], 
+       main = paste("Histogram of", var), 
+       xlab = var, 
+       col = "lightgray", 
+       breaks = 10, 
+       prob = TRUE)
+  curve(dnorm(x, mean(data[[var]]), sd(data[[var]])), 
+        col = "red", lwd = 2, add = TRUE)
+  
+  qqnorm(data[[var]], main = paste("QQ Plot of", var))
+  qqline(data[[var]], col = "blue", lwd = 2)
+  
+  # بازنشانی پارامترهای گرافیکی
+  par(mfrow = c(1, 1))
+  
+
+}
+
+
+```
+
+
+---
+
+---
+
+
+```{r}
+# کتابخانه‌های لازم
+library(car)
+
+# Overall Index
+data$Overall_Index_Transformed <- bcPower(data$`Overall Index`, lambda = -0.18)
+
+# Exchange Rate (Log Transform)
+data$Exchange_Rate_Transformed <- log(data$`Exchange Rate` + 1)  # جلوگیری از log(0)
+
+# Inflation Rate
+data$Inflation_Rate_Transformed <- bcPower(data$`Inflation Rate`, lambda = -0.476)
+
+# Interest Rate (Inverse Transform)
+data$Interest_Rate_Transformed <- 1 / data$`Interest Rate`
+
+# Oil Price
+data$Oil_Price_Transformed <- bcPower(data$`Oil Price`, lambda = 0.426)
+
+# بررسی نرمالیت نهایی
+transformed_vars <- c(
+  "Overall_Index_Transformed", 
+  "Exchange_Rate_Transformed", 
+  "Inflation_Rate_Transformed",
+  "Interest_Rate_Transformed",
+  "Oil_Price_Transformed"
+)
+
+for (var in transformed_vars) {
+  cat("\n=== Normality Check for", var, "===\n")
+  print(shapiro.test(data[[var]]))
+}
+
+# آزمون‌های بارتلت، لوین و فلیگنر-کیلین برای متغیرهای تبدیل‌شده# آزمون‌های بارتلت، لوین و فلیگنر-کیلین برای متغیرهای تبدیل‌شده
+numeric_vars <- transformed_vars
+
+for (var in numeric_vars) {
+  cat("\n==============================\n")
+  cat("Variable:", var, "\n")
+  cat("==============================\n\n")
+  
+  cat(">>> Bartlett Test <<<\n")
+  print(
+    bartlett.test(
+      as.formula(paste0(var, " ~ Year_Group")),
+      data = data
+    )
+  )
+  cat("\n\n")
+}
+
+for (var in numeric_vars) {
+  cat("\n==============================\n")
+  cat("Variable:", var, "\n")
+  cat("==============================\n\n")
+  
+  cat(">>> Levene Test <<<\n")
+  print(
+    leveneTest(
+      as.formula(paste0(var, " ~ Year_Group")), 
+      data = data
+    )
+  )
+  cat("\n\n")
+}
+
+for (var in numeric_vars) {
+  cat("\n==============================\n")
+  cat("Variable:", var, "\n")
+  cat("==============================\n\n")
+  
+  cat(">>> Fligner-Killeen Test <<<\n")
+  print(
+    fligner.test(
+      as.formula(paste0(var, " ~ Year_Group")),
+      data = data
+    )
+  )
+  cat("\n\n")
+}
+```
+
+
+```{r}
+numeric_vars <- c("Overall_Index_Transformed", "Interest_Rate_Transformed", 
+                  "Inflation_Rate_Transformed", "Exchange_Rate_Transformed", "Oil_Price_Transformed")
+
+for (var in numeric_vars) {
+
+  
+  # ترسیم هیستوگرام و نمودار QQ برای مشاهده توزیع
+  par(mfrow = c(1, 2))
+  hist(data[[var]], 
+       main = paste("Histogram of", var), 
+       xlab = var, 
+       col = "lightgray", 
+       breaks = 10, 
+       prob = TRUE)
+  curve(dnorm(x, mean(data[[var]]), sd(data[[var]])), 
+        col = "red", lwd = 2, add = TRUE)
+  
+  qqnorm(data[[var]], main = paste("QQ Plot of", var))
+  qqline(data[[var]], col = "blue", lwd = 2)
+  
+  # بازنشانی پارامترهای گرافیکی
+  par(mfrow = c(1, 1))
+  
+
+}
+```
+
+
+---
+
+---
+
+
+
+```{r}
+
+# بررسی VIF (Variance Inflation Factor) برای مدل رگرسیون
+library(car)
+
+# مطمئن شوید که ستون‌های داده شما به درستی نام‌گذاری شده‌اند و وجود دارند
+# جایگزین کردن نام ستون‌ها با نام‌های صحیح موجود در داده شما
+model_temp <- lm(`Overall_Index_Transformed` ~ `Interest_Rate_Transformed` + 
+                   `Inflation_Rate_Transformed` + `Exchange_Rate_Transformed` + 
+                   `Oil_Price_Transformed`, data = data)
+
+# محاسبه VIF
+vif_values <- vif(model_temp)
+
+# چاپ VIF
+cat("\n==============================\n")
+cat("Variance Inflation Factors (VIF):\n")
+cat("==============================\n\n")
+print(vif_values)
+
+
+
+```
+
+---
+
+---
+
+
+
+```{r}
+# گام 6: ساخت مدل رگرسیون خطی اصلی
+model <- lm(`Overall_Index_Transformed` ~ `Interest_Rate_Transformed` + 
+              `Inflation_Rate_Transformed` + `Exchange_Rate_Transformed` + 
+              `Oil_Price_Transformed`, data = data)
+
+# نمایش خلاصه‌ای از مدل
+cat("\n==============================\n")
+cat("نتایج مدل رگرسیون خطی اولیه (با متغیرهای تبدیل‌شده)\n")
+cat("==============================\n\n")
+summary(model)
+
+```
+
+---
+
+---
+
+
+```{r}
+residuals_model <- residuals(model)
+
+# آزمون شاپیرو-ویلک بر روی پسماندها
+shapiro_res <- shapiro.test(residuals_model)
+cat("\n==============================\n")
+cat("Shapiro-Wilk Test on Residuals\n")
+cat("==============================\n\n")
+print(shapiro_res)
+
+# QQ Plot پسماندها
+qqnorm(residuals_model, main = "QQ Plot of Residuals")
+qqline(residuals_model, col = "red")
+
+```
+
+---
+
+---
+
+```{r}
+fitted_values <- fitted(model)
+
+plot(fitted_values, residuals_model,
+     xlab = "Fitted Values",
+     ylab = "Residuals",
+     main = "Residuals vs. Fitted")
+abline(h = 0, col = "red")
+
+# اگر الگوی قیفی شکل یا روند خاصی در نمودار دیده شد، احتمال واریانس ناهمسان وجود دارد.
+
+```
+
+---
+
+---
+
+
+```{r}
+if (!requireNamespace("lmtest", quietly = TRUE)) {
+  install.packages("lmtest")
+}
+library(lmtest)
+
+bptest(model)  # آزمون بروس-پگان
+
+
+```
+
+---
+
+---
+
+
+```{r}
+cook_values <- cooks.distance(model)
+plot(cook_values, 
+     ylab = "Cook's Distance", 
+     main = "Cook's Distance for Each Observation")
+abline(h = 4/(nrow(data) - length(coef(model)) - 1), col = "red")
+
+```
+
+
+---
+
+---
+
+
+```{r}
+influential_points <- which(cooks.distance(model_temp) > 0.2)
+print(influential_points)
+
+data_cleaned <- data[-influential_points, ]
+model_temp_cleaned <- lm(`Overall_Index_Transformed` ~ `Interest_Rate_Transformed` + 
+                         `Inflation_Rate_Transformed` + `Exchange_Rate_Transformed` + 
+                         `Oil_Price_Transformed`, data = data_cleaned)
+summary(model_temp_cleaned)
+
+```
+
+
+
+---
+
+---
+
+```{r}
+# انجام تحلیل واریانس برای مدل رگرسیون
+anova_results <- anova(model_temp_cleaned)
+
+# نمایش جدول ANOVA
+cat("\n==============================\n")
+cat("جدول تحلیل واریانس (ANOVA Table)\n")
+cat("==============================\n\n")
+print(anova_results)
+
+# توضیحات تکمیلی:
+cat("\n--------------------------------------------------------\n")
+cat("تفسیر جدول ANOVA:\n")
+cat("- ستون 'Sum Sq': مجموع مربعات برای هر متغیر.\n")
+cat("- ستون 'Mean Sq': میانگین مربعات برای هر متغیر.\n")
+cat("- ستون 'F value': مقدار آماره F برای هر متغیر.\n")
+cat("- ستون 'Pr(>F)': مقدار p برای آزمون فرضیه اثرگذاری.\n")
+cat("--------------------------------------------------------\n\n")
+
+```
+
+
+---
+
+---
+
+```{r}
+# دریافت مقادیر باقی‌مانده‌ها و نقاط برازش شده
+residuals_model <- residuals(model)
+fitted_values <- fitted(model)
+
+# 1. نمودار پراکنش بین باقی‌مانده‌ها و نقاط برازش شده پاسخ
+plot(fitted_values, residuals_model,
+     xlab = "Fitted Values",
+     ylab = "Residuals",
+     main = "Scatterplot of Residuals vs. Fitted Values",
+     pch = 19,
+     col = "blue")
+abline(h = 0, col = "red", lwd = 2)
+
+# 2. نمودار پراکنش بین توان دوم باقی‌مانده‌ها و نقاط برازش شده پاسخ
+plot(fitted_values, residuals_model^2,
+     xlab = "Fitted Values",
+     ylab = "Squared Residuals",
+     main = "Scatterplot of Squared Residuals vs. Fitted Values",
+     pch = 19,
+     col = "green")
+abline(h = 0, col = "red", lwd = 2)
+
+# 3. نمودار پراکنش بین قدر مطلق باقی‌مانده‌ها و نقاط برازش شده پاسخ
+plot(fitted_values, abs(residuals_model),
+     xlab = "Fitted Values",
+     ylab = "Absolute Residuals",
+     main = "Scatterplot of Absolute Residuals vs. Fitted Values",
+     pch = 19,
+     col = "purple")
+abline(h = 0, col = "red", lwd = 2)
+
+```
+
+---
+
+---
+
+```{r}
+# اجرای آزمون گلدفیلد-کوانت
+goldfeld_quandt_test <- gqtest(model_temp_cleaned, order.by = fitted(model_temp_cleaned))
+
+# نمایش نتایج
+cat("\n==============================\n")
+cat("نتایج آزمون گلدفیلد-کوانت (Goldfeld-Quandt)\n")
+cat("==============================\n\n")
+print(goldfeld_quandt_test)
+
+```
+
+---
+
+---
+
+```{r}
+# بارگذاری کتابخانه مورد نیاز
+if (!requireNamespace("lmtest", quietly = TRUE)) {
+  install.packages("lmtest")
+}
+library(lmtest)
+
+# اجرای آزمون Breusch-Pagan برای مدل تمیز شده
+bp_test <- bptest(model_temp_cleaned)
+
+# نمایش نتایج آزمون
+cat("\n==============================\n")
+cat("نتایج آزمون Breusch-Pagan (BP Test)\n")
+cat("==============================\n\n")
+print(bp_test)
+
+# راهنمای تفسیر
+cat("\n--------------------------------------------------------\n")
+cat("راهنمای تفسیر:\n")
+cat("- اگر p-value < 0.05 باشد، فرضیه صفر (همگنی واریانس) رد می‌شود.\n")
+cat("- اگر p-value > 0.05 باشد، فرضیه صفر پذیرفته می‌شود (واریانس همگن است).\n")
+cat("--------------------------------------------------------\n\n")
+
+```
+
+---
+
+---
+
+```{r}
+# نصب کتابخانه مورد نیاز
+if (!requireNamespace("sandwich", quietly = TRUE)) {
+  install.packages("sandwich")
+}
+if (!requireNamespace("lmtest", quietly = TRUE)) {
+  install.packages("lmtest")
+}
+library(sandwich)
+library(lmtest)
+
+# محاسبه ضرایب استوار
+robust_se <- coeftest(model_temp_cleaned, vcov = vcovHC(model_temp_cleaned, type = "HC3"))
+
+# نمایش ضرایب استوار
+cat("\n==============================\n")
+cat("ضرایب رگرسیونی با خطای استاندارد استوار\n")
+cat("==============================\n\n")
+print(robust_se)
+
+# راهنمای تفسیر:
+cat("\n--------------------------------------------------------\n")
+cat("راهنمای تفسیر ضرایب:\n")
+cat("- ضرایب استوار در صورت وجود ناهمگنی واریانس قابل اعتمادتر هستند.\n")
+cat("- در صورتی که ضرایب معنادار باقی بمانند، مدل قابل قبول است.\n")
+cat("--------------------------------------------------------\n")
+
+```
+
+
+---
+
+---
+
+```{r}
+# تعیین وزن‌ها (معکوس باقی‌مانده‌ها به عنوان تقریبی از واریانس)
+weights <- 1 / (abs(residuals(model_temp_cleaned)) + 1e-6)
+
+# مدل با استفاده از رگرسیون وزنی
+wls_model <- lm(`Overall_Index_Transformed` ~ `Interest_Rate_Transformed` + 
+                  `Inflation_Rate_Transformed` + `Exchange_Rate_Transformed` + 
+                  `Oil_Price_Transformed`, data = data_cleaned, weights = weights)
+
+# نمایش خلاصه مدل وزنی
+cat("\n==============================\n")
+cat("خلاصه مدل رگرسیون وزنی\n")
+cat("==============================\n\n")
+summary(wls_model)
+
+# آزمون واریانس باقی‌مانده‌ها در مدل وزنی
+cat("\n==============================\n")
+cat("آزمون همگنی واریانس در مدل وزنی\n")
+cat("==============================\n\n")
+bptest(wls_model)
+
+```
+
+---
+
+---
+
+```{r}
+# نصب کتابخانه مورد نیاز
+if (!requireNamespace("MASS", quietly = TRUE)) {
+  install.packages("MASS")
+}
+library(MASS)
+
+# مدل مقاوم با استفاده از الگوریتم Huber
+robust_model <- rlm(`Overall_Index_Transformed` ~ `Interest_Rate_Transformed` + 
+                      `Inflation_Rate_Transformed` + `Exchange_Rate_Transformed` + 
+                      `Oil_Price_Transformed`, data = data_cleaned)
+
+# خلاصه مدل مقاوم
+cat("\n==============================\n")
+cat("خلاصه مدل مقاوم\n")
+cat("==============================\n\n")
+summary(robust_model)
+
+```
+
