@@ -31,6 +31,7 @@ This project implements a comprehensive **regression analysis** using **R** to e
 ├── 📜 regression.Rmd             # R Markdown file with full implementation
 ├── 📜 Final_Data_Translated.xlsx # Dataset file
 ├── 📜 README.md                  # Project documentation
+├── 📜 regression_.pdf            # pdf file with full implementation
 ```
 
 ## 🛠️ Installation
